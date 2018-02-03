@@ -34,58 +34,25 @@ bot.on('ready', () => {
  */
 bot.on('message', message => {
     
-    const voiceChannel = message.member.voiceChannel;
-    let sentimentResult = null, responseIndex = null, content = null;
+    let voiceChannel = null;
+    let reply = null;
     
     if (message.content.startsWith('teach ale slave,')) {
-        content = message.content.split('ale slave,')[1];
-        sentimentResult = sentiment(message.content.split('ale slave,')[1]);
-        
-        if (sentimentResult.score >= 0) {
-            responseIndex = 'pn';
-            if (sentimentResult.score >= 2) {
-                responseIndex = 'p';
-                if (sentimentResult.score >= 5) {
-                    responseIndex = 'pp';
-                }
-            }
-        } else {
-            if (sentimentResult.score > -2) { responseIndex = 'n'; }
-            if (sentimentResult.score >= -5) { responseIndex = 'nn'; }
-        }
-        
-        responses[responseIndex].push(content);
-        fs.writeFileSync('./responses.json', JSON.stringify(responses));
-        return;
+        return _teachResponse(message.content.split('ale slave,')[1]);
     }
     
     if (!message.content.startsWith('ale slave,')) {
         return;
     }
     
-    if (!voiceChannel) {
+    if (!message.member.voiceChannel) {
         console.log(new Error('No voice channel.'))
         return;
     }
     
-    message.content = message.content.split('ale slave,')[1];
+    voiceChannel = message.member.voiceChannel;
 
-    sentimentResult = sentiment(message.content);
-    console.log('sentiment score: ' + sentimentResult.score);
-    let reply = 'Not sure how to reply.';
-
-    if (sentimentResult.score >= 0) {
-        reply = responses.pn[_getRandomInt(responses.pn.length-1)];
-        if (sentimentResult.score >= 2) {
-            reply = responses.p[_getRandomInt(responses.p.length-1)];
-            if (sentimentResult.score >= 5) {
-                reply = responses.pp[_getRandomInt(responses.pp.length-1)];
-            }
-        }
-    } else {
-        if (sentimentResult.score > -2) { reply = responses.n[_getRandomInt(responses.n.length-1)]; }
-        if (sentimentResult.score >= -5) { reply = responses.nn[_getRandomInt(responses.nn.length-1)]; }
-    }
+    reply = _generateTextResponse(message.content.split('ale slave,')[1]);
     
     _makeVoiceSynth(reply)
         .then(() => {
@@ -102,12 +69,6 @@ bot.on('message', message => {
         .catch(console.log);
     
 });
-
-function _getRandomInt(max) {
-    
-  return Math.floor(Math.random() * Math.floor(max));
-  
-}
 
 function _makeVoiceSynth(text) {
     
@@ -133,5 +94,90 @@ function _makeVoiceSynth(text) {
             });
             
     });
+    
+}
+
+function _generateTextResponse(text) {
+    
+    const sentimentScore = sentiment(text).score;
+    let reply = responses.pn[_getRandomInt(responses.pn.length-1)];
+    
+    console.log('sentiment score: ' + sentimentScore);
+    
+    if (_isPositive(sentimentScore)) {
+        
+        if (sentimentScore >= 2 && sentimentScore < 5) {
+            reply = responses.p[_getRandomInt(responses.p.length-1)];
+        }
+        
+        if (sentimentScore >= 5) {
+            reply = responses.pp[_getRandomInt(responses.pp.length-1)];
+        }
+        
+    } else {
+        
+        if (sentimentScore <= -2 && sentimentScore < -5) { 
+            reply = responses.n[_getRandomInt(responses.n.length-1)]; 
+        }
+        
+        if (sentimentScore <= -5) { 
+            reply = responses.nn[_getRandomInt(responses.nn.length-1)]; 
+        }
+        
+    }
+    
+    return reply;
+    
+}
+
+function _teachResponse(text) {
+    
+    const sentimentScore = sentiment(text).score;
+    console.log('sentiment score: ' + sentimentScore);
+    let responseIndex = 'pn';
+    
+    if (_isPositive(sentimentScore)) {
+        
+        if (sentimentScore >= 2 && sentimentScore < 5) {
+            responseIndex = 'p';
+        }
+        
+        if (sentimentScore >= 5) {
+            responseIndex = 'pp';
+        }
+        
+    } else {
+        
+        if (sentimentScore >= -2 && sentimentScore < -5) { 
+            responseIndex = 'n';
+        }
+        
+        if (sentimentScore >= -5) { 
+            responseIndex = 'nn';
+        }
+        
+    }
+    
+    return _updateResponses(responseIndex, content);
+    
+}
+
+function _updateResponses(index, content) {
+    
+    // Currently updating global var - bad bad not good.
+    responses[responseIndex].push(content);
+    return fs.writeFileSync('./responses.json', JSON.stringify(responses));
+    
+}
+
+function _getRandomInt(max) {
+    
+  return Math.floor(Math.random() * Math.floor(max));
+  
+}
+
+function _isPositive(number) {
+    
+    return Math.sign(number);
     
 }
