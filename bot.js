@@ -4,9 +4,10 @@ const fs = require('fs');
 const discord = require('discord.js');
 const sentiment = require('sentiment');
 const watsonTts = require('watson-developer-cloud/text-to-speech/v1');
+const ytdl = require("ytdl-core");
+
 const auth = require('./auth.json');
 const responses = require('./responses.json');
-
 const jokes = require('./jokes.json');
 
 const watsonTtsCreds = auth.watsonTTS;
@@ -45,6 +46,10 @@ bot.on('message', message => {
     
     if (message.content.startsWith('ale slave, joke')) {
         return _makeJoke(message);
+    }
+    
+    if (message.content.startsWith('ale slave, play')) {
+        return _playYoutubeStream(message);
     }
     
     if (!message.content.startsWith('ale slave,')) {
@@ -175,6 +180,34 @@ function _teachResponse(text) {
     }
     
     return _updateResponses(responseIndex, text);
+    
+}
+
+function _playYoutubeStream(message) {
+    
+    const url = message.content.split('ale slave, play ')[1];
+    const voiceChannel = message.member.voiceChannel;
+    
+    // ytdl should handle url validation properly
+    if (!ytdl.validateURL(url)) {
+        console.log('Bad URL: ', url);
+        return null;
+    }
+    
+    return voiceChannel.join()
+        .then(connection => {
+            return connection.playStream(ytdl(url, { audioonly: true }));
+        })
+        .then(dispatcher => {
+            return dispatcher.on('end', () => { voiceChannel.leave(); });
+        })
+        .then(() => {
+            return ytdl.getInfo(url, (err, info) => {
+                if (err) throw err;
+                message.channel.send(`Now playing ${info.title}`);
+            });
+        })
+        .catch(console.log);
     
 }
 

@@ -9,11 +9,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^11.1.0",
+    "discord.js": "^11.3.0",
     "node-opus": "^0.2.7",
     "opusscript": "0.0.6",
     "sentiment": "^4.2.0",
     "watson-developer-cloud": "^3.0.5",
-    "winston": "^2.4.0"
+    "winston": "^2.4.0",
+    "ytdl-core": "^0.20.0"
   }
 }
