@@ -196,7 +196,7 @@ function _playYoutubeStream(message) {
     
     return voiceChannel.join()
         .then(connection => {
-            return connection.playStream(ytdl(url, { audioonly: true }));
+            return connection.playStream(ytdl(url, { audioonly: true, quality: 'highestaudio' }));
         })
         .then(dispatcher => {
             return dispatcher.on('end', () => { voiceChannel.leave(); });
