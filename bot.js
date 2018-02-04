@@ -56,15 +56,13 @@ bot.on('message', message => {
     
     _makeVoiceSynth(reply)
         .then(() => {
-            voiceChannel.join()
+            return voiceChannel.join()
                 .then(connection => {
-                    return connection.playFile('./hello_world.mp3');
-                })
-                .then(dispatcher => {
-                    dispatcher.on('error', console.log);
-                    dispatcher.on('finish', () => { console.log('Finished playing!'); });
-                })
-                .catch(console.log);
+                    return connection.playFile('./hello_world.mp3', {volume: 1}, (err, player) => {
+                        if (err) console.log(err);
+                        console.log(player);
+                    });
+                });
         })
         .catch(console.log);
     
@@ -76,21 +74,31 @@ function _makeVoiceSynth(text) {
         
         const params = {
             text: text,
-            voice: 'en-US_MichaelVoice',
+            voice: 'en-GB_KateVoice',
             accept: 'audio/mp3'
         };
         
-        const audioStream = fs.createWriteStream('hello_world.mp3');
+        const audioStream = fs.createWriteStream('./hello_world.mp3');
         
         textToSpeech.synthesize(params)
             .on('error', function(error) {
-                reject(error);
+                return reject(error);
             })
             .pipe(audioStream);
             
+            audioStream.on('error', (error) => {
+                console.log('ERROR:', error);
+                return reject(error);
+            });
+            
+            audioStream.on('finish', () => {
+                console.log('FINISH: Write filestream finished.');
+                return resolve(null);
+            });
+            
             audioStream.on('close', () => {
-                console.log('Write filestream finished.');
-                resolve(null);
+                console.log('CLOSE: Write filestream finished.');
+                return resolve(null);
             });
             
     });
@@ -100,31 +108,33 @@ function _makeVoiceSynth(text) {
 function _generateTextResponse(text) {
     
     const sentimentScore = sentiment(text).score;
-    let reply = responses.pn[_getRandomInt(responses.pn.length-1)];
+    let reply = responses.pn[_getRandomInt(responses.pn.length)];
     
     console.log('sentiment score: ' + sentimentScore);
     
     if (_isPositive(sentimentScore)) {
         
         if (sentimentScore >= 2 && sentimentScore < 5) {
-            reply = responses.p[_getRandomInt(responses.p.length-1)];
+            reply = responses.p[_getRandomInt(responses.p.length)];
         }
         
         if (sentimentScore >= 5) {
-            reply = responses.pp[_getRandomInt(responses.pp.length-1)];
+            reply = responses.pp[_getRandomInt(responses.pp.length)];
         }
         
     } else {
         
-        if (sentimentScore <= -2 && sentimentScore < -5) { 
-            reply = responses.n[_getRandomInt(responses.n.length-1)]; 
+        if (sentimentScore <= -2 && sentimentScore > -5) { 
+            reply = responses.n[_getRandomInt(responses.n.length)]; 
         }
         
         if (sentimentScore <= -5) { 
-            reply = responses.nn[_getRandomInt(responses.nn.length-1)]; 
+            reply = responses.nn[_getRandomInt(responses.nn.length)]; 
         }
         
     }
+    
+    console.log(reply);
     
     return reply;
     
@@ -138,34 +148,34 @@ function _teachResponse(text) {
     
     if (_isPositive(sentimentScore)) {
         
-        if (sentimentScore >= 2 && sentimentScore < 5) {
+        if (sentimentScore <= 2 && sentimentScore > 5) {
             responseIndex = 'p';
         }
         
-        if (sentimentScore >= 5) {
+        if (sentimentScore <= 5) {
             responseIndex = 'pp';
         }
         
     } else {
         
-        if (sentimentScore >= -2 && sentimentScore < -5) { 
+        if (sentimentScore <= -2 && sentimentScore > -5) { 
             responseIndex = 'n';
         }
         
-        if (sentimentScore >= -5) { 
+        if (sentimentScore <= -5) { 
             responseIndex = 'nn';
         }
         
     }
     
-    return _updateResponses(responseIndex, content);
+    return _updateResponses(responseIndex, text);
     
 }
 
 function _updateResponses(index, content) {
     
     // Currently updating global var - bad bad not good.
-    responses[responseIndex].push(content);
+    responses[index].push(content);
     return fs.writeFileSync('./responses.json', JSON.stringify(responses));
     
 }
@@ -178,6 +188,6 @@ function _getRandomInt(max) {
 
 function _isPositive(number) {
     
-    return Math.sign(number);
+    return number > 0 && number !== 0;
     
 }
