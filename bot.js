@@ -7,6 +7,8 @@ const watsonTts = require('watson-developer-cloud/text-to-speech/v1');
 const auth = require('./auth.json');
 const responses = require('./responses.json');
 
+const jokes = require('./jokes.json');
+
 const watsonTtsCreds = auth.watsonTTS;
 
 const textToSpeech = new watsonTts({ 
@@ -39,6 +41,10 @@ bot.on('message', message => {
     
     if (message.content.startsWith('teach ale slave,')) {
         return _teachResponse(message.content.split('ale slave,')[1]);
+    }
+    
+    if (message.content.startsWith('ale slave, joke')) {
+        return _makeJoke(message);
     }
     
     if (!message.content.startsWith('ale slave,')) {
@@ -169,6 +175,14 @@ function _teachResponse(text) {
     }
     
     return _updateResponses(responseIndex, text);
+    
+}
+
+function _makeJoke(message) {
+    
+    return message.channel.send(jokes[_getRandomInt(jokes.length)], err => {
+        if (err) console.log(err);
+    });
     
 }
 
